@@ -12,12 +12,19 @@ export async function main(ns) {
 	ns.disableLog("scp");
 	ns.disableLog("sleep");
 
-	let script = "workflow-hack.js";
+	let tasks = {
+		"all": "workflow-hack.js",
+		"grow": "task-grow.js",
+		"hack": "task-hack.js",
+		"weaken": "task-weaken.js",
+	};
 	let serversList = "servers.txt";
 	let files = [
-		script,
 		serversList,
 	];
+	for (const taskType in tasks) {
+		files.push(tasks[taskType]);
+	}
 
 	let backdoorTargets = {
 		"CSEC": true,
@@ -114,6 +121,8 @@ export async function main(ns) {
 				ns.toast("Rooted: " + hostname, "success", 30000);
 			}
 
+			let taskType = "all";
+			let script = tasks[taskType];
 			let script_ram = ns.getScriptRam(script);
 			let available_ram = server.maxRam - ns.getServerUsedRam(hostname);
 			if (available_ram >= script_ram) {
