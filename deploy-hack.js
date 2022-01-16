@@ -1,3 +1,5 @@
+import {getServersCacheFilename, getCachedServers} from 'shared-functions.js';
+
 /** @param {NS} ns **/
 export async function main(ns) {
 	ns.disableLog("disableLog");
@@ -18,9 +20,9 @@ export async function main(ns) {
 		"hack": "task-hack.js",
 		"weaken": "task-weaken.js",
 	};
-	let serversList = "servers.txt";
 	let files = [
-		serversList,
+		getServersCacheFilename(ns),
+		"shared-functions.js",
 	];
 	for (const taskType in tasks) {
 		files.push(tasks[taskType]);
@@ -37,8 +39,7 @@ export async function main(ns) {
 
 	let tohack = [];
 	do {
-		let data = await ns.read(serversList);
-		let servers = JSON.parse(data);
+		let servers = await getCachedServers(ns);
 		tohack = [];
 		for (let i = 0; i < servers.length; i++) {
 			let server = servers[i];

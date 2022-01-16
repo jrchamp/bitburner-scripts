@@ -1,3 +1,5 @@
+import {getTarget} from 'shared-functions.js';
+
 /** @param {NS} ns **/
 export async function main(ns) {
 	ns.disableLog("disableLog");
@@ -5,32 +7,16 @@ export async function main(ns) {
 	ns.disableLog("getServerSecurityLevel");
 	ns.disableLog("sleep");
 
-	let file = "servers.txt";
-
 	// Infinite loop that continuously hacks/grows/weakens.
 	while (true) {
-		// Read the list of all servers.
-		let data = await ns.read(file);
-		let servers = JSON.parse(data);
-
-		let targets = [];
-		servers.forEach(function (server) {
-			// Ignore pointless targets.
-			if (server.hasRoot && server.maxMoney > 0 && server.minSecurity > 0) {
-				targets.push(server);
-			}
-		});
+		// Get a random target and we'll figure out what action to take.
+		let target = await getTarget(ns, "all");
 
 		// If there are no valid targets, wait.
-		if (targets.length <= 0) {
+		if (target === undefined) {
 			await ns.sleep(1000);
 			continue;
 		}
-
-		// Randomize target selection to balance the load.
-		let num_targets = Math.min(targets.length, 10),
-			random_index = Math.floor(Math.random() * num_targets),
-			target = targets[random_index];
 
 		// Use cached data about the server to minimize RAM usage.
 		let host = target.host;
@@ -46,7 +32,7 @@ export async function main(ns) {
 		let currentMoney = ns.getServerMoneyAvailable(host);
 		let currentSecurity = ns.getServerSecurityLevel(host);
 
-		let serverStatus = host + " - $" + Math.floor(currentMoney).toLocaleString() + " / $" + Math.floor(maxMoney).toLocaleString() + " (" + Math.round(100 * currentMoney / maxMoney) + "%); Security: " + currentSecurity + " / " + minSecurity;
+		let serverStatus = host + " - $" + Math.floor(currentMoney).toLocaleString() + " / $" + Math.floor(maxMoney).toLocaleString() + " (" + Math.round(100 * currentMoney / maxMoney) + "%); Security: " + (Math.floor(100 * currentSecurity) / 100) + " / " + minSecurity;
 		ns.print(serverStatus);
 
 		if (currentSecurity > securityThresh) {
