@@ -62,7 +62,7 @@ export async function getTarget(ns, taskType, offset = undefined) {
 
 	if (offset === undefined) {
 		// Randomize target selection to balance the load.
-		offset = Math.floor(Math.random() * numTargets),
+		offset = Math.floor(Math.random() * numTargets);
 	} else {
 		// Use pre-defined offsets to - hopefully - balance target selection in a stable way.
 		offset = offset % numTargets;
