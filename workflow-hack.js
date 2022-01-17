@@ -1,16 +1,16 @@
-import {getTarget} from 'shared-functions.js';
+import { getTarget } from 'shared-functions.js';
 
 /** @param {NS} ns **/
 export async function main(ns) {
-	ns.disableLog("disableLog");
-	ns.disableLog("getServerMoneyAvailable");
-	ns.disableLog("getServerSecurityLevel");
-	ns.disableLog("sleep");
+	ns.disableLog('disableLog');
+	ns.disableLog('getServerMoneyAvailable');
+	ns.disableLog('getServerSecurityLevel');
+	ns.disableLog('sleep');
 
 	// Infinite loop that continuously hacks/grows/weakens.
 	while (true) {
 		// Get a random target and we'll figure out what action to take.
-		let target = await getTarget(ns, "all");
+		let target = await getTarget(ns, 'all');
 
 		// If there are no valid targets, wait.
 		if (target === undefined) {
@@ -32,7 +32,7 @@ export async function main(ns) {
 		let currentMoney = ns.getServerMoneyAvailable(host);
 		let currentSecurity = ns.getServerSecurityLevel(host);
 
-		let serverStatus = host + " - $" + Math.floor(currentMoney).toLocaleString() + " / $" + Math.floor(maxMoney).toLocaleString() + " (" + Math.round(100 * currentMoney / maxMoney) + "%); Security: " + (Math.floor(100 * currentSecurity) / 100) + " / " + minSecurity;
+		let serverStatus = host + ' - $' + Math.floor(currentMoney).toLocaleString() + ' / $' + Math.floor(maxMoney).toLocaleString() + ' (' + Math.round(100 * currentMoney / maxMoney) + '%); Security: ' + (Math.floor(100 * currentSecurity) / 100) + ' / ' + minSecurity;
 		ns.print(serverStatus);
 
 		if (currentSecurity > securityThresh) {

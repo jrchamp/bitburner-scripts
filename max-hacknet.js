@@ -1,13 +1,13 @@
 /** @param {NS} ns **/
 export async function main(ns) {
-	ns.disableLog("disableLog");
-	ns.disableLog("getServerMoneyAvailable");
-	ns.disableLog("sleep");
+	ns.disableLog('disableLog');
+	ns.disableLog('getServerMoneyAvailable');
+	ns.disableLog('sleep');
 
 	while (true) {
-		while (ns.hacknet.numNodes() < ns.hacknet.maxNumNodes() && ns.getServerMoneyAvailable("home") > ns.hacknet.getPurchaseNodeCost()) {
+		while (ns.hacknet.numNodes() < ns.hacknet.maxNumNodes() && ns.getServerMoneyAvailable('home') > ns.hacknet.getPurchaseNodeCost()) {
 			ns.hacknet.purchaseNode();
-			ns.toast("Purchased hacknet node #" + ns.hacknet.numNodes(), "success", 30000);
+			ns.toast('Purchased hacknet node #' + ns.hacknet.numNodes(), 'success', 30000);
 		}
 
 		let number = 1;
@@ -23,27 +23,27 @@ export async function main(ns) {
 
 			let upgraded = false;
 
-			while (ns.hacknet.getLevelUpgradeCost(index, number) < ns.getServerMoneyAvailable("home")) {
+			while (ns.hacknet.getLevelUpgradeCost(index, number) < ns.getServerMoneyAvailable('home')) {
 				ns.hacknet.upgradeLevel(index, number);
 				upgraded = true;
 			}
 
-			while (ns.hacknet.getRamUpgradeCost(index, number) < ns.getServerMoneyAvailable("home")) {
+			while (ns.hacknet.getRamUpgradeCost(index, number) < ns.getServerMoneyAvailable('home')) {
 				ns.hacknet.upgradeRam(index, number);
 				upgraded = true;
 			}
 
-			while (ns.hacknet.getCoreUpgradeCost(index, number) < ns.getServerMoneyAvailable("home")) {
+			while (ns.hacknet.getCoreUpgradeCost(index, number) < ns.getServerMoneyAvailable('home')) {
 				ns.hacknet.upgradeCore(index, number);
 				upgraded = true;
 			}
 
 			if (upgraded) {
-				ns.print("Upgraded hacknet node #" + index);
+				ns.print('Upgraded hacknet node #' + index);
 			}
 
 			if (hacknetNodeIsMax(ns, index)) {
-				ns.toast("Maximized hacknet node #" + index, "success", 30000);
+				ns.toast('Maximized hacknet node #' + index, 'success', 30000);
 			}
 			/* // Hashnet only.
 			while (ns.hacknet.getCacheUpgradeCost(index, number) < ns.getServerMoneyAvailable("home")) {

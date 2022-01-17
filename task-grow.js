@@ -1,14 +1,14 @@
-import {getTarget} from 'shared-functions.js';
+import { getTarget } from 'shared-functions.js';
 
 /** @param {NS} ns **/
 export async function main(ns) {
-	ns.disableLog("disableLog");
-	ns.disableLog("sleep");
+	ns.disableLog('disableLog');
+	ns.disableLog('sleep');
 
 	// Infinite loop that continuously grows.
 	while (true) {
 		// Get a random target.
-		let target = await getTarget(ns, "grow");
+		let target = await getTarget(ns, 'grow');
 
 		// If there are no valid targets, wait.
 		if (target === undefined) {
