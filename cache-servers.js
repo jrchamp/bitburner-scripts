@@ -1,42 +1,42 @@
-import {getServersCacheFilename} from 'shared-functions.js';
+import { getServersCacheFilename } from 'shared-functions.js';
 
 var cached = {};
 var cache = [];
 
 /** @param {NS} ns **/
 export async function main(ns) {
-	ns.disableLog("disableLog");
-	ns.disableLog("getServerMaxMoney");
-	ns.disableLog("getServerMinSecurityLevel");
-	ns.disableLog("getServerRequiredHackingLevel");
-	ns.disableLog("getServerNumPortsRequired");
-	ns.disableLog("getServerMaxRam");
-	ns.disableLog("scan");
-	ns.disableLog("scp");
-	ns.disableLog("sleep");
+	ns.disableLog('disableLog');
+	ns.disableLog('getServerMaxMoney');
+	ns.disableLog('getServerMinSecurityLevel');
+	ns.disableLog('getServerRequiredHackingLevel');
+	ns.disableLog('getServerNumPortsRequired');
+	ns.disableLog('getServerMaxRam');
+	ns.disableLog('scan');
+	ns.disableLog('scp');
+	ns.disableLog('sleep');
 
 	let file = getServersCacheFilename(ns);
 	while (true) {
-		ns.print("Building server cache");
+		ns.print('Building server cache');
 		cached = {};
 		cache = [];
-		scan_all(ns, "", ["home"]);
+		scan_all(ns, '', ['home']);
 		cache.sort(function (a, b) {
 			return b.ratio - a.ratio;
 		});
 		let data = JSON.stringify(cache);
-		await ns.write(file, data, "w");
-		ns.print("Total servers cached: " + cache.length);
+		await ns.write(file, data, 'w');
+		ns.print('Total servers cached: ' + cache.length);
 
 		let count = 0;	
 		for (let i = 0; i < cache.length; i++) {
 			let server = cache[i];
-			if (server.host !== "home" && server.hasRoot) {
-				await ns.scp(file, "home", server.host);
+			if (server.host !== 'home' && server.hasRoot) {
+				await ns.scp(file, 'home', server.host);
 				count++;
 			}
 		}
-		ns.print("Deployed server cache to " + count + " systems");
+		ns.print('Deployed server cache to ' + count + ' systems');
 	
 		await ns.sleep(30000);
 	}
@@ -56,20 +56,20 @@ function scan_all(ns, path, hosts) {
 		let hasRoot = ns.hasRootAccess(hostname);
 
 		cache.push({
-			"host": hostname,
-			"maxMoney": maxMoney,
-			"minSecurity": minSecurity,
-			"requiredHackingLevel": requiredHackingLevel,
-			"numPortsRequired": numPortsRequired,
-			"maxRam": maxRam,
-			"hasRoot": hasRoot,
-			"ratio": maxMoney / minSecurity,
-			"path": path + "/" + hostname,
+			'host': hostname,
+			'maxMoney': maxMoney,
+			'minSecurity': minSecurity,
+			'requiredHackingLevel': requiredHackingLevel,
+			'numPortsRequired': numPortsRequired,
+			'maxRam': maxRam,
+			'hasRoot': hasRoot,
+			'ratio': maxMoney / minSecurity,
+			'path': path + '/' + hostname,
 		});
 		cached[hostname] = true;
 
 		let toscan = [],
-			hostpath = path + "/" + hostname;
+			hostpath = path + '/' + hostname;
 		ns.scan(hostname).forEach(function (newhostname) {
 			// Skip already scanned hosts.
 			if (cached[newhostname] === true) {

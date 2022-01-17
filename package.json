@@ -1,0 +1,21 @@
+{
+  "name": "bitburner-scripts",
+  "description": "Scripts for the game Bitburner",
+  "version": "1.0.0",
+  "scripts": {
+    "lint": "eslint --fix .",
+    "lint:report": "eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jrchamp/bitburner-scripts.git"
+  },
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/jrchamp/bitburner-scripts/issues"
+  },
+  "homepage": "https://github.com/jrchamp/bitburner-scripts",
+  "devDependencies": {
+    "eslint": "^8.7.0"
+  }
+}

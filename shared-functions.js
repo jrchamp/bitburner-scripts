@@ -1,11 +1,10 @@
 /**
  * The name of the server cache file.
  *
- * @param {NS} ns
  * @return {string}
  */
-export function getServersCacheFilename(ns) {
-	return "servers.txt";
+export function getServersCacheFilename() {
+	return 'servers.txt';
 }
 
 /**
