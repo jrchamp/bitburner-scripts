@@ -1,3 +1,5 @@
+import {getServersCacheFilename} from 'shared-functions.js';
+
 var cached = {};
 var cache = [];
 
@@ -13,7 +15,7 @@ export async function main(ns) {
 	ns.disableLog("scp");
 	ns.disableLog("sleep");
 
-	let file = "servers.txt";
+	let file = getServersCacheFilename(ns);
 	while (true) {
 		ns.print("Building server cache");
 		cached = {};
@@ -42,7 +44,7 @@ export async function main(ns) {
 
 /**
  * @param {NS} ns
- * @param Array hosts
+ * @param {Array} hosts
  */
 function scan_all(ns, path, hosts) {
 	hosts.forEach(function (hostname) {

@@ -1,3 +1,5 @@
+import { getServersCacheFilename, getCachedServers } from 'shared-functions.js';
+
 /** @param {NS} ns **/
 export async function main(ns) {
 	ns.disableLog("disableLog");
@@ -8,16 +10,30 @@ export async function main(ns) {
 	ns.disableLog("getServerMaxRam");
 	ns.disableLog("getServerUsedRam");
 	ns.disableLog("exec");
-	ns.disableLog("kill");
+	ns.disableLog("scriptKill");
 	ns.disableLog("scp");
 	ns.disableLog("sleep");
 
-	let script = "workflow-hack.js";
-	let serversList = "servers.txt";
+	let tasks = {
+		"all": "workflow-hack.js",
+		"grow": "task-grow.js",
+		"weaken": "task-weaken.js",
+		"hack": "task-hack.js",
+	};
+	// Order matters! Each task uses this percentage of remaining RAM.
+	let taskRatios = {
+		"all": 0,
+		"grow": 11 / 16,
+		"weaken": 4 / 5,
+		"hack": 1,
+	};
 	let files = [
-		script,
-		serversList,
+		getServersCacheFilename(ns),
+		"shared-functions.js",
 	];
+	for (const taskType in tasks) {
+		files.push(tasks[taskType]);
+	}
 
 	let backdoorTargets = {
 		"CSEC": true,
@@ -28,11 +44,9 @@ export async function main(ns) {
 		"The-Cave": true,
 	};
 
-	let tohack = [];
-	do {
-		let data = await ns.read(serversList);
-		let servers = JSON.parse(data);
-		tohack = [];
+	while (true) {
+		let servers = await getCachedServers(ns);
+		let tohack = [];
 		for (let i = 0; i < servers.length; i++) {
 			let server = servers[i];
 			let hostname = server.host;
@@ -114,25 +128,57 @@ export async function main(ns) {
 				ns.toast("Rooted: " + hostname, "success", 30000);
 			}
 
-			let script_ram = ns.getScriptRam(script);
-			let available_ram = server.maxRam - ns.getServerUsedRam(hostname);
-			if (available_ram >= script_ram) {
+			let taskType = "all";
+			let script = tasks[taskType];
+			let scriptRam = ns.getScriptRam(script);
+
+			let availableRam = server.maxRam - ns.getServerUsedRam(hostname);
+			if (availableRam >= scriptRam) {
 				// Copy the attack script and supporting files.
 				if (hostname !== "home") {
 					ns.print("Copying attack files to " + hostname);
 					await ns.scp(files, "home", hostname);
 				}
 
-				// Stop any currently running version of the process.
-				ns.kill(script, hostname);
+				for (const taskType in tasks) {
+					script = tasks[taskType];
 
-				// Determine the number of threads to run.
-				available_ram = server.maxRam - ns.getServerUsedRam(hostname);
-				let threads = Math.floor(available_ram / script_ram);
-				ns.exec(script, hostname, threads);
+					// Stop any currently running version of the processes.
+					ns.scriptKill(script, hostname);
+				}
+
+				let taskStats = {};
+				for (const taskType in tasks) {
+					// Determine the number of threads to run of each process.
+					availableRam = server.maxRam - ns.getServerUsedRam(hostname);
+
+					script = tasks[taskType];
+					scriptRam = ns.getScriptRam(script);
+
+					let totalThreads = Math.floor(taskRatios[taskType] * availableRam / scriptRam);
+
+					if (totalThreads > 0) {
+						taskStats[taskType] = totalThreads;
+
+						if (totalThreads < 20) {
+							// Use all the threads with random target selection.
+							ns.exec(script, hostname, totalThreads);
+						} else {
+							// Split the threads into 10 buckets with fixed target selection.
+							let maxThreads = Math.ceil(totalThreads / 10);
+							let remainingThreads = totalThreads;
+							for (let offset = 0; remainingThreads > 0; offset++) {
+								let processThreads = Math.min(maxThreads, remainingThreads);
+								ns.exec(script, hostname, processThreads, offset);
+								remainingThreads -= processThreads;
+							}
+						}
+					}
+				}
+				ns.toast("Task distribution for " + hostname + " - " + JSON.stringify(taskStats), "info", 30000);
 			}
 		}
 		ns.print("Remaining targets: " + tohack.length);
 		await ns.sleep(30000);
-	} while (tohack.length > 0);
+	}
 }
