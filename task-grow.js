@@ -5,10 +5,15 @@ export async function main(ns) {
 	ns.disableLog('disableLog');
 	ns.disableLog('sleep');
 
+	let offset = undefined;
+	if (ns.args.length > 0) {
+		offset = ns.args[0];
+	}
+
 	// Infinite loop that continuously grows.
 	while (true) {
-		// Get a random target.
-		let target = await getTarget(ns, 'grow');
+		// Get a target.
+		let target = await getTarget(ns, 'grow', offset);
 
 		// If there are no valid targets, wait.
 		if (target === undefined) {
