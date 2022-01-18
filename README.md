@@ -8,3 +8,8 @@ Please minimize spoilers as much as possible. The Bitburner editor has autocompl
 1. The goal is track the changes that are made to these scripts over time.
 2. It would be nice to not to lose anything in case a regression occurs.
 3. Sharing these scripts might allow for idea exchange.
+
+## Quick Start
+From the Bitburner terminal:
+1. wget https://raw.githubusercontent.com/jrchamp/bitburner-scripts/main/start-remote.js start-remote.js
+2. run start-remote.js
