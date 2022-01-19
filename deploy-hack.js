@@ -134,12 +134,13 @@ export async function main(ns) {
 
 				let taskStats = {};
 				for (const taskType in tasks) {
-					// Determine the number of threads to run of each process.
-					availableRam = server.maxRam - ns.getServerUsedRam(hostname);
+					// Determine the amount of available RAM (minus a safety buffer).
+					availableRam = server.maxRam - ns.getServerUsedRam(hostname) - 0.05;
 
 					script = tasks[taskType];
 					scriptRam = ns.getScriptRam(script);
 
+					// Determine the number of threads to run of each process.
 					let totalThreads = Math.floor(taskRatios[taskType] * availableRam / scriptRam);
 
 					if (totalThreads > 0) {
