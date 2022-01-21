@@ -79,3 +79,18 @@ export async function getTarget(ns, taskType, offset = undefined) {
 
 	return targets[offset];
 }
+
+/**
+ * Delay initial task start so they don't all start at the same time.
+ *
+ * @param {NS} ns
+ * @param {string} taskType
+ * @param {number=} offset
+ */
+export async function delayTask(ns, taskType, offset = undefined) {
+	let delayCycles = 75 * Math.floor(Math.random() * 60);
+	if (offset !== undefined) {
+		delayCycles += offset;
+	}
+	await ns.sleep(200 * delayCycles);
+}
