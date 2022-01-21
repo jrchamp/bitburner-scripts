@@ -1,4 +1,4 @@
-import { getServersCacheFilename, getCachedServers } from 'shared-functions.js';
+import { getServersCacheFilename, getCachedServers, getTargetLimit } from 'shared-functions.js';
 
 /** @param {NS} ns **/
 export async function main(ns) {
@@ -160,7 +160,7 @@ export async function main(ns) {
 							ns.exec(script, hostname, totalThreads);
 						} else {
 							// Split the threads into buckets with fixed target selection.
-							let numTargets = 10;
+							let numTargets = getTargetLimit();
 							let maxThreads = Math.min(Math.ceil(totalThreads / numTargets), taskMaxThreads[taskType]);
 							let remainingThreads = totalThreads;
 							for (let offset = 0; remainingThreads > 0; offset++) {

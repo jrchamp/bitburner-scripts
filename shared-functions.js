@@ -8,6 +8,15 @@ export function getServersCacheFilename() {
 }
 
 /**
+ * The limit on the number of targets.
+ *
+ * @return {number}
+ */
+export function getTargetLimit() {
+	return 10;
+}
+
+/**
  * Read the list of all servers.
  *
  * @param {NS} ns
@@ -23,10 +32,9 @@ export async function getCachedServers(ns) {
  * The full set of targets that are being attacked.
  *
  * @param {NS} ns
- * @param {number=} targetLimit Defaults to 10 targets max.
  * @return {Array}
  */
-export async function getAllTargets(ns, targetLimit = 10) {
+export async function getAllTargets(ns) {
 	let servers = await getCachedServers(ns);
 
 	let targets = [];
@@ -48,6 +56,7 @@ export async function getAllTargets(ns, targetLimit = 10) {
 	});
 
 	// Limit to a given number of targets.
+	let targetLimit = getTargetLimit();
 	targets = targets.slice(0, targetLimit);
 
 	return targets;
