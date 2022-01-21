@@ -31,8 +31,18 @@ export async function getAllTargets(ns, targetLimit = 10) {
 
 	let targets = [];
 	servers.forEach(function (server) {
-		// Ignore pointless targets.
-		if (server.hasRoot && server.maxMoney > 0 && server.minSecurity > 0) {
+		// Efficiency: Make sure server's required hacking is less than 80% of the player skill.
+		if (server.hackingRatio > 0.80) {
+			return;
+		}
+
+		// Must be rooted.
+		if (!server.hasRoot) {
+			return;
+		}
+
+		// Make sure it is a valid target.
+		if (server.maxMoney > 0 && server.minSecurity > 0) {
 			targets.push(server);
 		}
 	});
