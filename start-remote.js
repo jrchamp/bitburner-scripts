@@ -12,6 +12,7 @@ export async function main(ns) {
 		'task-grow.js': false,
 		'task-hack.js': false,
 		'task-weaken.js': false,
+		'task-share.js': false,
 		'workflow-hack.js': false,
 
 		// Active scripts (order matters).
