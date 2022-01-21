@@ -54,6 +54,9 @@ function scan_all(ns, path, hosts) {
 		let numPortsRequired = ns.getServerNumPortsRequired(hostname);
 		let maxRam = ns.getServerMaxRam(hostname);
 		let hasRoot = ns.hasRootAccess(hostname);
+		let hackSkill = ns.getHackingLevel();
+
+		let hostpath = path + 'connect ' + hostname + '; ';
 
 		cache.push({
 			'host': hostname,
@@ -64,12 +67,12 @@ function scan_all(ns, path, hosts) {
 			'maxRam': maxRam,
 			'hasRoot': hasRoot,
 			'ratio': maxMoney / minSecurity,
-			'path': path + '/' + hostname,
+			'hackingRatio': (requiredHackingLevel - 1) / hackSkill,
+			'path': hostpath,
 		});
 		cached[hostname] = true;
 
-		let toscan = [],
-			hostpath = path + '/' + hostname;
+		let toscan = [];
 		ns.scan(hostname).forEach(function (newhostname) {
 			// Skip already scanned hosts.
 			if (cached[newhostname] === true) {

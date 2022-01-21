@@ -1,4 +1,4 @@
-import { getTarget } from 'shared-functions.js';
+import { getTarget, delayTask } from 'shared-functions.js';
 
 /** @param {NS} ns **/
 export async function main(ns) {
@@ -9,6 +9,8 @@ export async function main(ns) {
 	if (ns.args.length > 0) {
 		offset = ns.args[0];
 	}
+
+	await delayTask(ns, 'grow', offset);
 
 	// Infinite loop that continuously grows.
 	while (true) {

@@ -1,4 +1,4 @@
-import { getServersCacheFilename, getCachedServers } from 'shared-functions.js';
+import { getServersCacheFilename, getCachedServers, getTargetLimit } from 'shared-functions.js';
 
 /** @param {NS} ns **/
 export async function main(ns) {
@@ -16,6 +16,7 @@ export async function main(ns) {
 
 	let tasks = {
 		'all': 'workflow-hack.js',
+		'share': 'task-share.js',
 		'grow': 'task-grow.js',
 		'weaken': 'task-weaken.js',
 		'hack': 'task-hack.js',
@@ -23,9 +24,17 @@ export async function main(ns) {
 	// Order matters! Each task uses this percentage of remaining RAM.
 	let taskRatios = {
 		'all': 0,
+		'share': 0,
 		'grow': 11 / 16,
 		'weaken': 4 / 5,
 		'hack': 1,
+	};
+	let taskMaxThreads = {
+		'all': 28000,
+		'share': 1e9,
+		'grow': 28000,
+		'weaken': 1700,
+		'hack': 1800,
 	};
 	let files = [
 		getServersCacheFilename(ns),
@@ -146,12 +155,13 @@ export async function main(ns) {
 					if (totalThreads > 0) {
 						taskStats[taskType] = totalThreads;
 
-						if (totalThreads < 20) {
+						if (totalThreads < 100 || taskType === 'share') {
 							// Use all the threads with random target selection.
 							ns.exec(script, hostname, totalThreads);
 						} else {
-							// Split the threads into 10 buckets with fixed target selection.
-							let maxThreads = Math.ceil(totalThreads / 10);
+							// Split the threads into buckets with fixed target selection.
+							let numTargets = getTargetLimit();
+							let maxThreads = Math.min(Math.ceil(totalThreads / numTargets), taskMaxThreads[taskType]);
 							let remainingThreads = totalThreads;
 							for (let offset = 0; remainingThreads > 0; offset++) {
 								let processThreads = Math.min(maxThreads, remainingThreads);
