@@ -16,6 +16,7 @@ export async function main(ns) {
 
 	let tasks = {
 		'all': 'workflow-hack.js',
+		'share': 'task-share.js',
 		'grow': 'task-grow.js',
 		'weaken': 'task-weaken.js',
 		'hack': 'task-hack.js',
@@ -23,6 +24,7 @@ export async function main(ns) {
 	// Order matters! Each task uses this percentage of remaining RAM.
 	let taskRatios = {
 		'all': 0,
+		'share': 0,
 		'grow': 11 / 16,
 		'weaken': 4 / 5,
 		'hack': 1,
@@ -146,7 +148,7 @@ export async function main(ns) {
 					if (totalThreads > 0) {
 						taskStats[taskType] = totalThreads;
 
-						if (totalThreads < 20) {
+						if (totalThreads < 100 || taskType === 'share') {
 							// Use all the threads with random target selection.
 							ns.exec(script, hostname, totalThreads);
 						} else {
