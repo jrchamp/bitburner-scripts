@@ -29,6 +29,13 @@ export async function main(ns) {
 		'weaken': 4 / 5,
 		'hack': 1,
 	};
+	let taskMaxThreads = {
+		'all': 28000,
+		'share': 1e9,
+		'grow': 28000,
+		'weaken': 1700,
+		'hack': 1800,
+	};
 	let files = [
 		getServersCacheFilename(ns),
 		'shared-functions.js',
@@ -152,8 +159,9 @@ export async function main(ns) {
 							// Use all the threads with random target selection.
 							ns.exec(script, hostname, totalThreads);
 						} else {
-							// Split the threads into 10 buckets with fixed target selection.
-							let maxThreads = Math.ceil(totalThreads / 10);
+							// Split the threads into buckets with fixed target selection.
+							let numTargets = 10;
+							let maxThreads = Math.min(Math.ceil(totalThreads / numTargets), taskMaxThreads[taskType]);
 							let remainingThreads = totalThreads;
 							for (let offset = 0; remainingThreads > 0; offset++) {
 								let processThreads = Math.min(maxThreads, remainingThreads);
