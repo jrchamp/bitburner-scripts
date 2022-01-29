@@ -6,6 +6,7 @@ export async function main(ns) {
 	let files = {
 		// Support scripts.
 		'install-backdoor.js': false,
+		'get-path.js': false,
 		'max-hacknet.js': false,
 		'shared-functions.js': false,
 		'status-targets.js': false,

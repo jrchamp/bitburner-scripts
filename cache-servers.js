@@ -58,7 +58,11 @@ function scan_all(ns, path, hosts) {
 		let hasRoot = ns.hasRootAccess(hostname);
 		let hackSkill = ns.getHackingLevel();
 
-		let hostpath = path + 'connect ' + hostname + '; ';
+		let hostpath = path;
+		if (hostname !== 'home') {
+			hostpath += 'connect ';
+		}
+		hostpath += hostname + '; ';
 
 		cache.push({
 			'host': hostname,
