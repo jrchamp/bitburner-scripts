@@ -33,8 +33,8 @@ export async function main(ns) {
 		await ns.wget(url, filename, 'home');
 		ns.toast('wget ' + filename, 'success', 10000);
 		if (files[filename] === true) {
-			ns.exec(filename, 'home');
-			ns.toast('Exec ' + filename, 'success', 10000);
+			ns.run(filename);
+			ns.toast('run ' + filename, 'success', 10000);
 		}
 	}
 }
