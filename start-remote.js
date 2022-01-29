@@ -5,7 +5,8 @@ export async function main(ns) {
 	// TODO: Consider having this available as deploy.json.
 	let files = {
 		// Support scripts.
-		'install-backdoor.js': false,
+		'backdoor-install.js': false,
+		'backdoor-list.js': false,
 		'get-path.js': false,
 		'max-hacknet.js': false,
 		'shared-functions.js': false,

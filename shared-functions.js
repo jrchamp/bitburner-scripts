@@ -103,3 +103,30 @@ export async function delayTask(ns, taskType, offset = undefined) {
 	}
 	await ns.sleep(200 * delayCycles);
 }
+
+/**
+ * @return {Object}
+ */
+export function getBackdoorTargets() {
+	return {
+		// Factions
+		'avmnite-02h': true,
+		'CSEC': true,
+		'I.I.I.I': true,
+		'run4theh111z': true,
+		'fulcrumassets': true,
+
+		// Discounts
+		'crush-fitness': true,
+		'iron-gym': true,
+		'millenium-fitness': true,
+		'powerhouse-fitness': true,
+		'snap-fitness': true,
+		'rothman-uni': true,
+		'summit-uni': true,
+		'zb-institute': true,
+
+		// Other
+		'w0r1d_d43m0n': true,
+	};
+}
