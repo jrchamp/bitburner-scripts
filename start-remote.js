@@ -5,7 +5,9 @@ export async function main(ns) {
 	// TODO: Consider having this available as deploy.json.
 	let files = {
 		// Support scripts.
-		'install-backdoor.js': false,
+		'backdoor-install.js': false,
+		'backdoor-list.js': false,
+		'get-path.js': false,
 		'max-hacknet.js': false,
 		'shared-functions.js': false,
 		'status-targets.js': false,
@@ -31,8 +33,8 @@ export async function main(ns) {
 		await ns.wget(url, filename, 'home');
 		ns.toast('wget ' + filename, 'success', 10000);
 		if (files[filename] === true) {
-			ns.exec(filename, 'home');
-			ns.toast('Exec ' + filename, 'success', 10000);
+			ns.run(filename);
+			ns.toast('run ' + filename, 'success', 10000);
 		}
 	}
 }

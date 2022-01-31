@@ -6,6 +6,7 @@ var cache = [];
 /** @param {NS} ns **/
 export async function main(ns) {
 	ns.disableLog('disableLog');
+	ns.disableLog('getHackingLevel');
 	ns.disableLog('getServerMaxMoney');
 	ns.disableLog('getServerMinSecurityLevel');
 	ns.disableLog('getServerRequiredHackingLevel');
@@ -38,12 +39,13 @@ export async function main(ns) {
 		}
 		ns.print('Deployed server cache to ' + count + ' systems');
 	
-		await ns.sleep(30000);
+		await ns.sleep(10000);
 	}
 }
 
 /**
  * @param {NS} ns
+ * @param {string} path
  * @param {Array} hosts
  */
 function scan_all(ns, path, hosts) {
@@ -56,7 +58,11 @@ function scan_all(ns, path, hosts) {
 		let hasRoot = ns.hasRootAccess(hostname);
 		let hackSkill = ns.getHackingLevel();
 
-		let hostpath = path + 'connect ' + hostname + '; ';
+		let hostpath = path;
+		if (hostname !== 'home') {
+			hostpath += 'connect ';
+		}
+		hostpath += hostname + '; ';
 
 		cache.push({
 			'host': hostname,
