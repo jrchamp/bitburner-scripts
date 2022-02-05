@@ -1,13 +1,11 @@
 import { getServersCacheFilename, getCachedServers, getTargetLimit } from 'shared-functions.js';
+import { cacheServers } from 'cache-servers.js';
 
 /** @param {NS} ns **/
 export async function main(ns) {
 	ns.disableLog('disableLog');
-	ns.disableLog('getServerRequiredHackingLevel');
 	ns.disableLog('getHackingLevel');
-	ns.disableLog('getServerNumPortsRequired');
 	ns.disableLog('getScriptRam');
-	ns.disableLog('getServerMaxRam');
 	ns.disableLog('getServerUsedRam');
 	ns.disableLog('exec');
 	ns.disableLog('scriptKill');
@@ -45,6 +43,10 @@ export async function main(ns) {
 	}
 
 	while (true) {
+		// Caching the servers as part of this script saves 2.25 GB.
+		await cacheServers(ns);
+
+		let hack_skill = ns.getHackingLevel();
 		let servers = await getCachedServers(ns);
 		let tohack = [];
 		for (let i = 0; i < servers.length; i++) {
@@ -56,7 +58,6 @@ export async function main(ns) {
 				tohack.push(server);
 
 				let hack_required = server.requiredHackingLevel;
-				let hack_skill = ns.getHackingLevel();
 				let serverStatus = hostname + ' - ' + hack_skill + '/' + hack_required + ': ' + (Math.floor(10000 * hack_skill / hack_required) / 100) + '%';
 				if (hack_skill < hack_required) {
 					ns.print('Waiting to attack: ' + serverStatus);
@@ -175,6 +176,6 @@ export async function main(ns) {
 			}
 		}
 		ns.print('Remaining targets: ' + tohack.length);
-		await ns.sleep(30000);
+		await ns.sleep(15000);
 	}
 }

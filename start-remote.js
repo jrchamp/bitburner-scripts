@@ -16,9 +16,9 @@ export async function main(ns) {
 		'task-weaken.js': false,
 		'task-share.js': false,
 		'workflow-hack.js': false,
+		'cache-servers.js': false,
 
 		// Active scripts (order matters).
-		'cache-servers.js': true,
 		'purchase-servers.js': true,
 		'deploy-hack.js': true,
 	};
