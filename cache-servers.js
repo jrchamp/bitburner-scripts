@@ -6,6 +6,20 @@ var cache = [];
 /** @param {NS} ns **/
 export async function main(ns) {
 	ns.disableLog('disableLog');
+	ns.disableLog('sleep');
+
+	while (true) {
+		await cacheServers(ns);
+
+		await ns.sleep(10000);
+	}
+}
+
+/**
+ * @param {NS} ns
+ */
+export async function cacheServers(ns) {
+	ns.disableLog('disableLog');
 	ns.disableLog('getHackingLevel');
 	ns.disableLog('getServerMaxMoney');
 	ns.disableLog('getServerMinSecurityLevel');
@@ -14,33 +28,28 @@ export async function main(ns) {
 	ns.disableLog('getServerMaxRam');
 	ns.disableLog('scan');
 	ns.disableLog('scp');
-	ns.disableLog('sleep');
 
 	let file = getServersCacheFilename(ns);
-	while (true) {
-		ns.print('Building server cache');
-		cached = {};
-		cache = [];
-		scan_all(ns, '', ['home']);
-		cache.sort(function (a, b) {
-			return b.ratio - a.ratio;
-		});
-		let data = JSON.stringify(cache);
-		await ns.write(file, data, 'w');
-		ns.print('Total servers cached: ' + cache.length);
+	ns.print('Building server cache');
+	cached = {};
+	cache = [];
+	scan_all(ns, '', ['home']);
+	cache.sort(function (a, b) {
+		return b.ratio - a.ratio;
+	});
+	let data = JSON.stringify(cache);
+	await ns.write(file, data, 'w');
+	ns.print('Total servers cached: ' + cache.length);
 
-		let count = 0;	
-		for (let i = 0; i < cache.length; i++) {
-			let server = cache[i];
-			if (server.host !== 'home' && server.hasRoot) {
-				await ns.scp(file, 'home', server.host);
-				count++;
-			}
+	let count = 0;	
+	for (let i = 0; i < cache.length; i++) {
+		let server = cache[i];
+		if (server.host !== 'home' && server.hasRoot) {
+			await ns.scp(file, 'home', server.host);
+			count++;
 		}
-		ns.print('Deployed server cache to ' + count + ' systems');
-	
-		await ns.sleep(10000);
 	}
+	ns.print('Deployed server cache to ' + count + ' systems');
 }
 
 /**
