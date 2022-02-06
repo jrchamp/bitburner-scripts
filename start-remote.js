@@ -28,13 +28,23 @@ export async function main(ns) {
 		baseUrl = ns.args[0];
 	}
 
+	let runFailures = false;
 	for (const filename in files) {
 		let url = baseUrl + filename;
 		await ns.wget(url, filename, 'home');
-		ns.toast('wget ' + filename, 'success', 10000);
 		if (files[filename] === true) {
-			ns.run(filename);
-			ns.toast('run ' + filename, 'success', 10000);
+			let runStatus = 'error';
+			if (ns.run(filename)) {
+				runStatus = 'success';
+			} else {
+				runFailures = true;
+			}
+			ns.toast('run ' + filename, runStatus, 10000);
 		}
+	}
+
+	if (runFailures) {
+		ns.tprint('Some scripts failed to run. home may not have enough memory.');
+		ns.tprint('At a minimum, run the command: run deploy-hack.js');
 	}
 }
