@@ -9,7 +9,18 @@ export async function main(ns) {
 			let hostname = server.host;
 			if (backdoorTargets[hostname] === true) {
 				// Requires Source Code 4.1
-				await ns.installBackdoor(hostname);
+				let pathServers = server.path.replaceAll(/;/g, '').split(' connect ');
+				let success = true;
+				for (const pathServer of pathServers) {
+					if (!ns.connect(pathServer.trim())) {
+						success = false;
+						ns.tprint('Failed connecting to ' + pathServer);
+					}
+				}
+				if (success) {
+					await ns.installBackdoor();
+					ns.toast('backdoor ' + hostname, 'success', 10000);
+				}
 			}
 		}
 	}
