@@ -1,16 +1,17 @@
 {
 	"backdoor-install.js": false,
 	"backdoor-list.js": false,
+	"cache-servers.js": false,
 	"get-path.js": false,
 	"max-hacknet.js": false,
 	"shared-functions.js": false,
+	"start-local.js": false,
 	"status-targets.js": false,
 	"task-grow.js": false,
 	"task-hack.js": false,
-	"task-weaken.js": false,
 	"task-share.js": false,
+	"task-weaken.js": false,
 	"workflow-hack.js": false,
-	"cache-servers.js": false,
 	"purchase-servers.js": true,
 	"deploy-hack.js": true
 }
