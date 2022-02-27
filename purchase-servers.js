@@ -5,10 +5,11 @@ export async function main(ns) {
 	ns.disableLog('getServerMaxRam');
 	ns.disableLog('sleep');
 
+	let maxMagnitude = Math.log2(ns.getPurchasedServerMaxRam());
 	// Scale up ram automatically over time to max value of 1048576 (2^20).
 	for (let magnitude = 4; magnitude <= 20; magnitude += 4) {
 		// How much RAM each purchased server will have.
-		let ram = Math.pow(2, magnitude);
+		let ram = Math.pow(2, Math.min(magnitude, maxMagnitude));
 		let orders = {
 			0: 'GB',
 			1: 'TB',
