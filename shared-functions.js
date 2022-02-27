@@ -97,7 +97,7 @@ export async function getTarget(ns, taskType, offset = undefined) {
  * @param {number=} offset
  */
 export async function delayTask(ns, taskType, offset = undefined) {
-	let delayCycles = 75 * Math.floor(Math.random() * 60);
+	let delayCycles = 10 * Math.floor(Math.random() * 60);
 	if (offset !== undefined) {
 		delayCycles += offset;
 	}
