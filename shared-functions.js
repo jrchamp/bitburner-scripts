@@ -105,6 +105,16 @@ export async function delayTask(ns, taskType, offset = undefined) {
 }
 
 /**
+ * Get amount of reputation needed for a given amount of favor.
+ *
+ * @param {number} favor
+ * @return {number}
+ */
+export function getReputationForFavor(favor) {
+	return Math.ceil(25000 * (Math.pow(1.02, favor) - 1));
+}
+
+/**
  * @return {Object}
  */
 export function getBackdoorTargets() {
