@@ -35,7 +35,7 @@ export function acquirePrograms(ns) {
 
 		// Still working on creating a program.
 		if (ns.isFocused()) {
-			if (player.tor && ns.getServerMoneyAvailable('home') < programs[programName]) {
+			if (player.tor && ns.getServerMoneyAvailable('home') > programs[programName]) {
 				ns.stopAction();
 			} else {
 				continue;
