@@ -145,6 +145,15 @@ export function purchaseAndInstallAugmentations(ns) {
 						break;
 					}
 				}
+				if (augName === 'CashRoot Starter Kit') {
+					hasGoodStats = true;
+				}
+				/* // TODO: Make sure to buy enough Augmentations to meet Daedalus requirements.
+				if (!hasGoodStats) {
+					hasGoodStats = true;
+					ns.tprint([augName, stats]);
+				}
+				*/
 				if (hasGoodStats) {
 					augmentations[augName] = {
 						'name': augName,
