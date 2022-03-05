@@ -12,6 +12,7 @@
 	"task-share.js": false,
 	"task-weaken.js": false,
 	"workflow-hack.js": false,
+	"singularity-programs.js": true,
 	"purchase-servers.js": true,
 	"deploy-hack.js": true
 }
