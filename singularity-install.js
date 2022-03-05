@@ -145,6 +145,9 @@ export function purchaseAndInstallAugmentations(ns) {
 						break;
 					}
 				}
+				if (augName === 'NeuroFlux Governor') {
+					hasGoodStats = false;
+				}
 				if (augName === 'CashRoot Starter Kit') {
 					hasGoodStats = true;
 				}
@@ -154,13 +157,12 @@ export function purchaseAndInstallAugmentations(ns) {
 					ns.tprint([augName, stats]);
 				}
 				*/
-				if (hasGoodStats) {
-					augmentations[augName] = {
-						'name': augName,
-						'factions': [faction],
-						'price': ns.getAugmentationPrice(augName),
-					};
-				}
+				augmentations[augName] = {
+					'name': augName,
+					'factions': [faction],
+					'price': ns.getAugmentationPrice(augName),
+					'hasGoodStats': hasGoodStats,
+				};
 			}
 		}
 	}
@@ -173,7 +175,9 @@ export function purchaseAndInstallAugmentations(ns) {
 
 	// Buy the augmentations, fulfilling prerequisites first as needed.
 	for (const augName of sortedAugmentations) {
-		recursivelyPurchaseAugmentation(ns, augName, augmentations);
+		if (augmentations[augName]['hasGoodStats']) {
+			recursivelyPurchaseAugmentation(ns, augName, augmentations);
+		}
 	}
 
 	// Upgrade home computer RAM.
@@ -186,9 +190,21 @@ export function purchaseAndInstallAugmentations(ns) {
 		ns.upgradeHomeCores();
 	}
 
+	let augName;
+
 	// Spend the rest of the money on NeuroFlux Governor levels.
-	while (recursivelyPurchaseAugmentation(ns, 'NeuroFlux Governor', augmentations)) {
-		// Intentionally left blank as the loop condition does the work.
+	augName = 'NeuroFlux Governor';
+	while (ns.getAugmentationPrice(augName) < ns.getServerMoneyAvailable('home')) {
+		// TODO: Consider donating to the faction when the limitation is the faction rep.
+		if (!recursivelyPurchaseAugmentation(ns, augName, augmentations)) {
+			break;
+		}
+	}
+
+	// This one is free, so buy this one last to avoid raising prices for others.
+	augName = 'The Red Pill';
+	if (augmentations[augName]) {
+		recursivelyPurchaseAugmentation(ns, augName, augmentations);
 	}
 
 	// Install augmentations and run initial script.
