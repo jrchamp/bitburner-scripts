@@ -21,9 +21,18 @@ export async function main(ns) {
 	let supportFiles = [getServersCacheFilename(), 'shared-functions.js'];
 	let allFiles = [...supportFiles, ...taskScripts];
 
+	let warnedPrograms = new Set();
+	let startupGuideShown = false;
+
 	while (true) {
 		try {
 			await cacheServers(ns);
+
+			// One-time startup guidance.
+			if (!startupGuideShown) {
+				startupGuideShown = true;
+				ns.toast('Batcher is running! Next steps: buy port programs (BruteSSH.exe, FTPCrack.exe) from terminal. Track targets with "run status-targets.js". Backdoor faction servers with "run backdoor-install.js". Buy augs from your factions to grow stronger.', 'info', 30000);
+			}
 
 			let hackSkill = ns.getHackingLevel();
 			let servers = await getCachedServers(ns);
@@ -31,7 +40,7 @@ export async function main(ns) {
 			// Root any unrooted servers we can access.
 			for (let server of servers) {
 				if (server.hasRoot) continue;
-				tryRoot(ns, server, hackSkill);
+				tryRoot(ns, server, hackSkill, warnedPrograms);
 			}
 
 			// Collect worker servers (rooted, not home/pserv-1, have RAM).
@@ -43,6 +52,9 @@ export async function main(ns) {
 			}
 
 			if (workers.length === 0) {
+				if (servers.length > 0) {
+					ns.toast('No rooted servers with RAM available. Buy port programs and purchase servers to get started.', 'info', 10000);
+				}
 				await ns.sleep(15000);
 				continue;
 			}
@@ -84,25 +96,27 @@ export async function main(ns) {
 /**
  * Attempt to root a single server.
  */
-function tryRoot(ns, server, hackSkill) {
+function tryRoot(ns, server, hackSkill, warnedPrograms) {
 	let hostname = server.host;
 	if (hackSkill < server.requiredHackingLevel) return;
 	if (server.numPortsRequired > 5) return;
 
-	if (server.numPortsRequired >= 5 && ns.fileExists('SQLInject.exe', 'home')) {
-		ns.sqlinject(hostname);
-	}
-	if (server.numPortsRequired >= 4 && ns.fileExists('HTTPWorm.exe', 'home')) {
-		ns.httpworm(hostname);
-	}
-	if (server.numPortsRequired >= 3 && ns.fileExists('relaySMTP.exe', 'home')) {
-		ns.relaysmtp(hostname);
-	}
-	if (server.numPortsRequired >= 2 && ns.fileExists('FTPCrack.exe', 'home')) {
-		ns.ftpcrack(hostname);
-	}
-	if (server.numPortsRequired >= 1 && ns.fileExists('BruteSSH.exe', 'home')) {
-		ns.brutessh(hostname);
+	let programs = [
+		{ name: 'BruteSSH.exe', ports: 1, fn: 'brutessh' },
+		{ name: 'FTPCrack.exe', ports: 2, fn: 'ftpcrack' },
+		{ name: 'relaySMTP.exe', ports: 3, fn: 'relaysmtp' },
+		{ name: 'HTTPWorm.exe', ports: 4, fn: 'httpworm' },
+		{ name: 'SQLInject.exe', ports: 5, fn: 'sqlinject' },
+	];
+
+	for (let prog of programs) {
+		if (prog.ports > server.numPortsRequired) continue;
+		if (ns.fileExists(prog.name, 'home')) {
+			ns[prog.fn](hostname);
+		} else if (!warnedPrograms.has(prog.name)) {
+			warnedPrograms.add(prog.name);
+			ns.toast('Need ' + prog.name + ' to root more servers — type "buy ' + prog.name + '" in terminal', 'info', 15000);
+		}
 	}
 
 	if (ns.getServerNumPortsRequired(hostname) <= server.numPortsRequired) {
