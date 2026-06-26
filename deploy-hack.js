@@ -1,4 +1,4 @@
-import { getServersCacheFilename, getCachedServers, getAllTargets } from 'shared-functions.js';
+import { getCachedServers, getAllTargets } from 'shared-functions.js';
 import { cacheServers } from 'cache-servers.js';
 
 /** @param {NS} ns **/
@@ -18,11 +18,11 @@ export async function main(ns) {
 	ns.disableLog('getHackTime');
 
 	let taskScripts = ['task-hack.js', 'task-grow.js', 'task-weaken.js'];
-	let supportFiles = [getServersCacheFilename(), 'shared-functions.js'];
+	let supportFiles = ['shared-functions.js'];
 	let allFiles = [...supportFiles, ...taskScripts];
 
-	let warnedPrograms = new Set();
 	let startupGuideShown = false;
+	let programsWarned = false;
 
 	while (true) {
 		try {
@@ -37,10 +37,42 @@ export async function main(ns) {
 			let hackSkill = ns.getHackingLevel();
 			let servers = await getCachedServers(ns);
 
+			// Fix any stale hasRoot values in the cache so we don't miss workers/targets.
+			for (let server of servers) {
+				if (!server.hasRoot && ns.hasRootAccess(server.host)) {
+					server.hasRoot = true;
+				}
+			}
+
 			// Root any unrooted servers we can access.
 			for (let server of servers) {
 				if (server.hasRoot) continue;
-				tryRoot(ns, server, hackSkill, warnedPrograms);
+				tryRoot(ns, server, hackSkill);
+			}
+
+			// Warn about missing port programs once per session.
+			if (!programsWarned) {
+				let names = ['BruteSSH.exe', 'FTPCrack.exe', 'relaySMTP.exe', 'HTTPWorm.exe', 'SQLInject.exe'];
+				let maxPortsNeeded = 0;
+				for (let server of servers) {
+					if (!server.hasRoot && server.maxMoney > 0 && server.hackingRatio <= 0.80 && server.numPortsRequired > maxPortsNeeded) {
+						maxPortsNeeded = server.numPortsRequired;
+					}
+				}
+				if (maxPortsNeeded > 0) {
+					let portsOwned = names.filter(n => ns.fileExists(n, 'home')).length;
+					if (portsOwned < maxPortsNeeded) {
+						programsWarned = true;
+						let next = names[portsOwned];
+						let hint;
+						if (servers.some(s => s.host === 'darkweb')) {
+							hint = 'Type "buy ' + next + '" in terminal.';
+						} else {
+							hint = 'Buy TOR router from the city (200k) to access the darkweb, then type "buy ' + next + '". Or create from the Create Program tab.';
+						}
+						ns.toast('Need ' + next + ' to root more servers. ' + hint, 'info', 20000);
+					}
+				}
 			}
 
 			// Collect worker servers (rooted, not home/pserv-1, have RAM).
@@ -55,7 +87,7 @@ export async function main(ns) {
 				if (servers.length > 0) {
 					ns.toast('No rooted servers with RAM available. Buy port programs and purchase servers to get started.', 'info', 10000);
 				}
-				await ns.sleep(15000);
+				await ns.sleep(10000);
 				continue;
 			}
 
@@ -64,16 +96,26 @@ export async function main(ns) {
 				await ns.scp(allFiles, worker.host, 'home');
 			}
 
-			// Calculate and deploy batches for each target.
+			// Calculate total thread budget and divide across targets.
 			let targets = await getAllTargets(ns);
+			let ramW = ns.getScriptRam('task-weaken.js');
+			let totalBudget = 0;
+			for (let worker of workers) {
+				totalBudget += Math.floor((worker.maxRam - ns.getServerUsedRam(worker.host)) / ramW);
+			}
+			let budgetPerTarget = Math.max(1, Math.floor(totalBudget / Math.max(1, targets.length)));
+
+			// Calculate and deploy batches for each target.
 			let batchesDeployed = 0;
+			let longestWeaken = 0;
 			for (let target of targets) {
-				let batch = calculateBatch(ns, target);
+				let batch = calculateBatch(ns, target, budgetPerTarget);
 				if (!batch) continue;
 
 				let deployed = deployBatch(ns, batch, workers);
 				if (deployed) {
 					batchesDeployed++;
+					if (batch.weakenTime > longestWeaken) longestWeaken = batch.weakenTime;
 					ns.print('Batch for ' + target.host + ': ' + batch.weakenThreads + 'w / ' + batch.growThreads + 'g / ' + batch.hackThreads + 'h (~' + Math.round(batch.weakenTime / 1000) + 's)');
 				}
 			}
@@ -82,7 +124,7 @@ export async function main(ns) {
 				ns.toast('Deployed ' + batchesDeployed + ' batch(es)', 'info', 5000);
 			}
 
-			await ns.sleep(15000);
+			await ns.sleep(Math.min(Math.max(longestWeaken + 1000, 5000), 10000));
 		} catch (err) {
 			ns.print('Error: ' + err);
 			await ns.sleep(5000);
@@ -93,92 +135,93 @@ export async function main(ns) {
 /**
  * Attempt to root a single server.
  */
-function tryRoot(ns, server, hackSkill, warnedPrograms) {
+function tryRoot(ns, server, hackSkill) {
 	let hostname = server.host;
 	if (hackSkill < server.requiredHackingLevel) return;
 	if (server.numPortsRequired > 5) return;
 
-	let programs = [
-		{ name: 'BruteSSH.exe', ports: 1, fn: 'brutessh' },
-		{ name: 'FTPCrack.exe', ports: 2, fn: 'ftpcrack' },
-		{ name: 'relaySMTP.exe', ports: 3, fn: 'relaysmtp' },
-		{ name: 'HTTPWorm.exe', ports: 4, fn: 'httpworm' },
-		{ name: 'SQLInject.exe', ports: 5, fn: 'sqlinject' },
-	];
+	let opened = 0;
 
-	for (let prog of programs) {
-		if (prog.ports > server.numPortsRequired) continue;
-		if (ns.fileExists(prog.name, 'home')) {
-			ns[prog.fn](hostname);
-		} else if (!warnedPrograms.has(prog.name)) {
-			warnedPrograms.add(prog.name);
-			ns.toast('Need ' + prog.name + ' to root more servers — type "buy ' + prog.name + '" in terminal', 'info', 15000);
-		}
+	if (server.numPortsRequired >= 1 && ns.fileExists('BruteSSH.exe', 'home')) {
+		if (ns.brutessh(hostname)) opened++;
+	}
+	if (server.numPortsRequired >= 2 && ns.fileExists('FTPCrack.exe', 'home')) {
+		if (ns.ftpcrack(hostname)) opened++;
+	}
+	if (server.numPortsRequired >= 3 && ns.fileExists('relaySMTP.exe', 'home')) {
+		if (ns.relaysmtp(hostname)) opened++;
+	}
+	if (server.numPortsRequired >= 4 && ns.fileExists('HTTPWorm.exe', 'home')) {
+		if (ns.httpworm(hostname)) opened++;
+	}
+	if (server.numPortsRequired >= 5 && ns.fileExists('SQLInject.exe', 'home')) {
+		if (ns.sqlinject(hostname)) opened++;
 	}
 
-	if (ns.getServerNumPortsRequired(hostname) <= server.numPortsRequired) {
+	if (opened >= server.numPortsRequired) {
 		ns.nuke(hostname);
-		ns.toast('Rooted: ' + hostname, 'success', 30000);
+		if (ns.hasRootAccess(hostname)) {
+			ns.toast('Rooted: ' + hostname, 'success', 30000);
+		}
 	}
 }
 
 /**
- * Calculate a coordinated batch for one target.
+ * Calculate a coordinated batch for one target that fits within a thread budget.
  *
+ * Tries hack fractions from 50% down to 0.1% until the total threads fit.
  * Returns { host, hackThreads, growThreads, weakenThreads, weakenTime, growDelay, hackDelay }
  * or null if the target can't be batched.
  */
-function calculateBatch(ns, target) {
+function calculateBatch(ns, target, threadBudget) {
 	let host = target.host;
 	let maxMoney = target.maxMoney;
 	let minSecurity = target.minSecurity;
 
 	if (maxMoney <= 0 || minSecurity <= 0) return null;
 
-	// Fraction of money to steal each batch.
-	let hackFraction = 0.5;
 	let hackPerThread = ns.hackAnalyze(host);
 	if (hackPerThread <= 0) return null;
 
-	let hackThreads = Math.ceil(hackFraction / hackPerThread);
-
-	// Clamp so we never try to steal more than the server has.
 	let maxHackThreads = Math.floor(1 / hackPerThread);
-	if (hackThreads > maxHackThreads) {
-		hackThreads = Math.max(1, maxHackThreads);
+
+	for (let hackFraction = 0.5; hackFraction >= 0.001; hackFraction /= 2) {
+		let hackThreads = Math.max(1, Math.ceil(hackFraction / hackPerThread));
+		if (hackThreads > maxHackThreads) {
+			hackThreads = Math.max(1, maxHackThreads);
+		}
+
+		let actualFraction = hackThreads * hackPerThread;
+		let growthMultiplier = 1 / (1 - actualFraction);
+		let growThreads = Math.max(1, Math.ceil(ns.growthAnalyze(host, growthMultiplier)));
+
+		let hackSecurity = hackThreads * 0.002;
+		let growSecurity = growThreads * 0.004;
+		let weakenThreads = Math.max(1, Math.ceil((hackSecurity + growSecurity) / 0.05));
+
+		let total = hackThreads + growThreads + weakenThreads;
+		if (total <= threadBudget) {
+			let weakenTime = ns.getWeakenTime(host);
+			let growTime = ns.getGrowTime(host);
+			let hackTime = ns.getHackTime(host);
+
+			let safetyMargin = 50;
+			let growDelay = Math.max(0, weakenTime - growTime - safetyMargin);
+			let hackDelay = Math.max(0, weakenTime - hackTime - safetyMargin);
+
+			return {
+				host,
+				hackThreads,
+				growThreads,
+				weakenThreads,
+				weakenTime,
+				growDelay,
+				hackDelay,
+			};
+		}
 	}
 
-	// Grow multiplier needed to restore money after the hack.
-	let actualFraction = hackThreads * hackPerThread;
-	let growthMultiplier = 1 / (1 - actualFraction);
-	let growThreads = Math.ceil(ns.growthAnalyze(host, growthMultiplier));
-
-	// Weaken threads to offset the security from hack + grow.
-	let hackSecurity = hackThreads * 0.002;
-	let growSecurity = growThreads * 0.004;
-	let weakenThreads = Math.ceil((hackSecurity + growSecurity) / 0.05);
-
-	if (hackThreads < 1 || growThreads < 1 || weakenThreads < 1) return null;
-
-	let weakenTime = ns.getWeakenTime(host);
-	let growTime = ns.getGrowTime(host);
-	let hackTime = ns.getHackTime(host);
-
-	// All operations finish at weakenTime from batch start.
-	// weaken starts immediately, grow and hack are delayed so they align.
-	let safetyMargin = 50;
-	let growDelay = Math.max(0, weakenTime - growTime - safetyMargin);
-	let hackDelay = Math.max(0, weakenTime - hackTime - safetyMargin);
-
-	return {
-		host,
-		hackThreads,
-		growThreads,
-		weakenThreads,
-		weakenTime,
-		growDelay,
-		hackDelay,
-	};
+	return null;
 }
 
 /**

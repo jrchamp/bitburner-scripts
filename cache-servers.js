@@ -1,4 +1,4 @@
-import { getServersCacheFilename } from 'shared-functions.js';
+import { setCachedServers } from 'shared-functions.js';
 
 var cached = {};
 var cache = [];
@@ -30,26 +30,14 @@ export async function cacheServers(ns) {
 	ns.disableLog('scp');
 
 	ns.print('Building server cache');
-	let file = getServersCacheFilename();
 	cached = {};
 	cache = [];
 	scan_all(ns, '', ['home']);
 	cache.sort(function (a, b) {
 		return b.ratio - a.ratio;
 	});
-	let data = JSON.stringify(cache);
-	await ns.write(file, data, 'w');
+	setCachedServers(ns, cache);
 	ns.print('Total servers cached: ' + cache.length);
-
-	let count = 0;	
-	for (let i = 0; i < cache.length; i++) {
-		let server = cache[i];
-		if (server.hasRoot) {
-			await ns.scp(file, server.host);
-			count++;
-		}
-	}
-	ns.print('Deployed server cache to ' + count + ' systems');
 }
 
 /**

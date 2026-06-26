@@ -1,10 +1,17 @@
 /**
- * The name of the server cache file.
- *
- * @return {string}
+ * The port number used for the server cache.
  */
-export function getServersCacheFilename() {
-	return 'servers.txt';
+export const CACHE_PORT = 20;
+
+/**
+ * Write the server cache to a port for cross-script access.
+ *
+ * @param {NS} ns
+ * @param {Array} data
+ */
+export function setCachedServers(ns, data) {
+	ns.clearPort(CACHE_PORT);
+	ns.writePort(CACHE_PORT, JSON.stringify(data));
 }
 
 /**
@@ -23,7 +30,7 @@ export function getTargetLimit() {
  * @return {Array}
  */
 export async function getCachedServers(ns) {
-	let data = await ns.read(getServersCacheFilename());
+	let data = ns.peek(CACHE_PORT) || '';
 	if (!data) return [];
 	try {
 		return JSON.parse(data);
