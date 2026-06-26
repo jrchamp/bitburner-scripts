@@ -1,4 +1,4 @@
-import { getServersCacheFilename, getCachedServers, getTargetLimit } from 'shared-functions.js';
+import { getServersCacheFilename, getCachedServers, getAllTargets } from 'shared-functions.js';
 import { cacheServers } from 'cache-servers.js';
 
 /** @param {NS} ns **/
@@ -11,173 +11,204 @@ export async function main(ns) {
 	ns.disableLog('scriptKill');
 	ns.disableLog('scp');
 	ns.disableLog('sleep');
+	ns.disableLog('hackAnalyze');
+	ns.disableLog('growthAnalyze');
+	ns.disableLog('getWeakenTime');
+	ns.disableLog('getGrowTime');
+	ns.disableLog('getHackTime');
 
-	let tasks = {
-		'all': 'workflow-hack.js',
-		'share': 'task-share.js',
-		'grow': 'task-grow.js',
-		'weaken': 'task-weaken.js',
-		'hack': 'task-hack.js',
-	};
-	// Order matters! Each task uses this percentage of remaining RAM.
-	let taskRatios = {
-		'all': 0,
-		'share': 0,
-		'grow': 11 / 16,
-		'weaken': 4 / 5,
-		'hack': 1,
-	};
-	let taskMaxThreads = {
-		'all': 28000,
-		'share': 1e9,
-		'grow': 28000,
-		'weaken': 1700,
-		'hack': 1800,
-	};
-	let files = [
-		getServersCacheFilename(ns),
-		'shared-functions.js',
-	];
-	for (const taskType in tasks) {
-		files.push(tasks[taskType]);
-	}
+	let taskScripts = ['task-hack.js', 'task-grow.js', 'task-weaken.js'];
+	let supportFiles = [getServersCacheFilename(), 'shared-functions.js'];
+	let allFiles = [...supportFiles, ...taskScripts];
 
 	while (true) {
-		// Caching the servers as part of this script saves 2.25 GB.
-		await cacheServers(ns);
+		try {
+			await cacheServers(ns);
 
-		let hack_skill = ns.getHackingLevel();
-		let servers = await getCachedServers(ns);
-		let tohack = [];
-		for (let i = 0; i < servers.length; i++) {
-			let server = servers[i];
-			let hostname = server.host;
+			let hackSkill = ns.getHackingLevel();
+			let servers = await getCachedServers(ns);
 
-			if (hostname === 'home' || hostname === 'pserv-1') {
+			// Root any unrooted servers we can access.
+			for (let server of servers) {
+				if (server.hasRoot) continue;
+				tryRoot(ns, server, hackSkill);
+			}
+
+			// Collect worker servers (rooted, not home/pserv-1, have RAM).
+			let workers = [];
+			for (let server of servers) {
+				if (server.host === 'home' || server.host === 'pserv-1') continue;
+				if (!server.hasRoot || server.maxRam <= 0) continue;
+				workers.push(server);
+			}
+
+			if (workers.length === 0) {
+				await ns.sleep(15000);
 				continue;
 			}
 
-			if (!server.hasRoot) {
-				// Double check it for next time.
-				tohack.push(server);
-
-				let hack_required = server.requiredHackingLevel;
-				let serverStatus = hostname + ' - ' + hack_skill + '/' + hack_required + ': ' + (Math.floor(10000 * hack_skill / hack_required) / 100) + '%';
-				if (hack_skill < hack_required) {
-					ns.print('Waiting to attack: ' + serverStatus);
-					continue;
+			// Copy files to all workers and kill stale task scripts.
+			for (let worker of workers) {
+				await ns.scp(allFiles, worker.host, 'home');
+				for (let script of taskScripts) {
+					ns.scriptKill(script, worker.host);
 				}
-				ns.print('Attacking: ' + serverStatus);
-
-				let ports_required = server.numPortsRequired;
-
-				if (ports_required >= 6) {
-					ns.print('Unknown port required for: ' + hostname + '; requires ' + ports_required);
-					continue;
-				}
-
-				if (ports_required >= 5) {
-					// When possible, open the SQL port on the target server.
-					if (!ns.fileExists('SQLInject.exe', 'home')) {
-						ns.print('SQL required for: ' + hostname);
-						continue;
-					}
-					ns.sqlinject(hostname);
-				}
-
-				if (ports_required >= 4) {
-					// When possible, open the HTTP port on the target server.
-					if (!ns.fileExists('HTTPWorm.exe', 'home')) {
-						ns.print('HTTP required for: ' + hostname);
-						continue;
-					}
-					ns.httpworm(hostname);
-				}
-
-				if (ports_required >= 3) {
-					// When possible, open the SMTP port on the target server.
-					if (!ns.fileExists('relaySMTP.exe', 'home')) {
-						ns.print('SMTP required for: ' + hostname);
-						continue;
-					}
-					ns.relaysmtp(hostname);
-				}
-
-				if (ports_required >= 2) {
-					// When possible, open the FTP port on the target server.
-					if (!ns.fileExists('FTPCrack.exe', 'home')) {
-						ns.print('FTP required for: ' + hostname);
-						continue;
-					}
-					ns.ftpcrack(hostname);
-				}
-
-				if (ports_required >= 1) {
-					// When possible, open the SSH port on the target server.
-					if (!ns.fileExists('BruteSSH.exe', 'home')) {
-						ns.print('SSH required for: ' + hostname);
-						continue;
-					}
-					ns.brutessh(hostname);
-				}
-
-				// Get root access to target server.
-				ns.nuke(hostname);
-
-				ns.toast('Rooted: ' + hostname, 'success', 30000);
 			}
 
-			let taskType = 'all';
-			let script = tasks[taskType];
-			let scriptRam = ns.getScriptRam(script);
+			// Calculate and deploy batches for each target.
+			let targets = await getAllTargets(ns);
+			let batchesDeployed = 0;
+			for (let target of targets) {
+				let batch = calculateBatch(ns, target);
+				if (!batch) continue;
 
-			let availableRam = server.maxRam - ns.getServerUsedRam(hostname);
-			if (availableRam >= scriptRam) {
-				// Copy the attack script and supporting files.
-				ns.print('Copying attack files to ' + hostname);
-				await ns.scp(files, hostname, 'home');
-
-				for (const taskType in tasks) {
-					script = tasks[taskType];
-
-					// Stop any currently running version of the processes.
-					ns.scriptKill(script, hostname);
+				let deployed = deployBatch(ns, batch, workers);
+				if (deployed) {
+					batchesDeployed++;
+					ns.print('Batch for ' + target.host + ': ' + batch.weakenThreads + 'w / ' + batch.growThreads + 'g / ' + batch.hackThreads + 'h (~' + Math.round(batch.weakenTime / 1000) + 's)');
 				}
-
-				let taskStats = {};
-				for (const taskType in tasks) {
-					// Determine the amount of available RAM (minus a safety buffer).
-					availableRam = server.maxRam - ns.getServerUsedRam(hostname) - 0.05;
-
-					script = tasks[taskType];
-					scriptRam = ns.getScriptRam(script);
-
-					// Determine the number of threads to run of each process.
-					let totalThreads = Math.floor(taskRatios[taskType] * availableRam / scriptRam);
-
-					if (totalThreads > 0) {
-						taskStats[taskType] = totalThreads;
-
-						if (totalThreads < 100 || taskType === 'share') {
-							// Use all the threads with random target selection.
-							ns.exec(script, hostname, totalThreads);
-						} else {
-							// Split the threads into buckets with fixed target selection.
-							let numTargets = getTargetLimit();
-							let maxThreads = Math.min(Math.ceil(totalThreads / numTargets), taskMaxThreads[taskType]);
-							let remainingThreads = totalThreads;
-							for (let offset = 0; remainingThreads > 0; offset++) {
-								let processThreads = Math.min(maxThreads, remainingThreads);
-								ns.exec(script, hostname, processThreads, offset);
-								remainingThreads -= processThreads;
-							}
-						}
-					}
-				}
-				ns.toast('Task distribution for ' + hostname + ' - ' + JSON.stringify(taskStats), 'info', 30000);
 			}
+
+			if (batchesDeployed > 0) {
+				ns.toast('Deployed ' + batchesDeployed + ' batch(es)', 'info', 5000);
+			}
+
+			await ns.sleep(15000);
+		} catch (err) {
+			ns.print('Error: ' + err);
+			await ns.sleep(5000);
 		}
-		ns.print('Remaining targets: ' + tohack.length);
-		await ns.sleep(15000);
 	}
+}
+
+/**
+ * Attempt to root a single server.
+ */
+function tryRoot(ns, server, hackSkill) {
+	let hostname = server.host;
+	if (hackSkill < server.requiredHackingLevel) return;
+	if (server.numPortsRequired > 5) return;
+
+	if (server.numPortsRequired >= 5 && ns.fileExists('SQLInject.exe', 'home')) {
+		ns.sqlinject(hostname);
+	}
+	if (server.numPortsRequired >= 4 && ns.fileExists('HTTPWorm.exe', 'home')) {
+		ns.httpworm(hostname);
+	}
+	if (server.numPortsRequired >= 3 && ns.fileExists('relaySMTP.exe', 'home')) {
+		ns.relaysmtp(hostname);
+	}
+	if (server.numPortsRequired >= 2 && ns.fileExists('FTPCrack.exe', 'home')) {
+		ns.ftpcrack(hostname);
+	}
+	if (server.numPortsRequired >= 1 && ns.fileExists('BruteSSH.exe', 'home')) {
+		ns.brutessh(hostname);
+	}
+
+	if (ns.getServerNumPortsRequired(hostname) <= server.numPortsRequired) {
+		ns.nuke(hostname);
+		ns.toast('Rooted: ' + hostname, 'success', 30000);
+	}
+}
+
+/**
+ * Calculate a coordinated batch for one target.
+ *
+ * Returns { host, hackThreads, growThreads, weakenThreads, weakenTime, growDelay, hackDelay }
+ * or null if the target can't be batched.
+ */
+function calculateBatch(ns, target) {
+	let host = target.host;
+	let maxMoney = target.maxMoney;
+	let minSecurity = target.minSecurity;
+
+	if (maxMoney <= 0 || minSecurity <= 0) return null;
+
+	// Fraction of money to steal each batch.
+	let hackFraction = 0.5;
+	let hackPerThread = ns.hackAnalyze(host);
+	if (hackPerThread <= 0) return null;
+
+	let hackThreads = Math.ceil(hackFraction / hackPerThread);
+
+	// Clamp so we never try to steal more than the server has.
+	let maxHackThreads = Math.floor(1 / hackPerThread);
+	if (hackThreads > maxHackThreads) {
+		hackThreads = Math.max(1, maxHackThreads);
+	}
+
+	// Grow multiplier needed to restore money after the hack.
+	let actualFraction = hackThreads * hackPerThread;
+	let growthMultiplier = 1 / (1 - actualFraction);
+	let growThreads = Math.ceil(ns.growthAnalyze(host, growthMultiplier));
+
+	// Weaken threads to offset the security from hack + grow.
+	let hackSecurity = hackThreads * 0.002;
+	let growSecurity = growThreads * 0.004;
+	let weakenThreads = Math.ceil((hackSecurity + growSecurity) / 0.05);
+
+	if (hackThreads < 1 || growThreads < 1 || weakenThreads < 1) return null;
+
+	let weakenTime = ns.getWeakenTime(host);
+	let growTime = ns.getGrowTime(host);
+	let hackTime = ns.getHackTime(host);
+
+	// All operations finish at weakenTime from batch start.
+	// weaken starts immediately, grow and hack are delayed so they align.
+	let safetyMargin = 50;
+	let growDelay = Math.max(0, weakenTime - growTime - safetyMargin);
+	let hackDelay = Math.max(0, weakenTime - hackTime - safetyMargin);
+
+	return {
+		host,
+		hackThreads,
+		growThreads,
+		weakenThreads,
+		weakenTime,
+		growDelay,
+		hackDelay,
+	};
+}
+
+/**
+ * Deploy a batch's threads across available worker servers.
+ * Returns true if all threads were deployed.
+ */
+function deployBatch(ns, batch, workers) {
+	let { host, hackThreads, growThreads, weakenThreads, growDelay, hackDelay } = batch;
+
+	let remainW = weakenThreads;
+	let remainG = growThreads;
+	let remainH = hackThreads;
+
+	let ramW = ns.getScriptRam('task-weaken.js');
+	let ramG = ns.getScriptRam('task-grow.js');
+	let ramH = ns.getScriptRam('task-hack.js');
+
+	for (let worker of workers) {
+		let avail = worker.maxRam - ns.getServerUsedRam(worker.host);
+
+		if (remainW > 0 && avail >= ramW) {
+			let threads = Math.min(remainW, Math.floor(avail / ramW));
+			ns.exec('task-weaken.js', worker.host, threads, host, 0);
+			remainW -= threads;
+			avail -= threads * ramW;
+		}
+
+		if (remainG > 0 && avail >= ramG) {
+			let threads = Math.min(remainG, Math.floor(avail / ramG));
+			ns.exec('task-grow.js', worker.host, threads, host, growDelay);
+			remainG -= threads;
+			avail -= threads * ramG;
+		}
+
+		if (remainH > 0 && avail >= ramH) {
+			let threads = Math.min(remainH, Math.floor(avail / ramH));
+			ns.exec('task-hack.js', worker.host, threads, host, hackDelay);
+			remainH -= threads;
+			avail -= threads * ramH;
+		}
+	}
+
+	return remainW <= 0 && remainG <= 0 && remainH <= 0;
 }

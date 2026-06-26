@@ -23,9 +23,13 @@ export function getTargetLimit() {
  * @return {Array}
  */
 export async function getCachedServers(ns) {
-	let file = getServersCacheFilename(ns);
-	let data = await ns.read(file);
-	return JSON.parse(data);
+	let data = await ns.read(getServersCacheFilename());
+	if (!data) return [];
+	try {
+		return JSON.parse(data);
+	} catch {
+		return [];
+	}
 }
 
 /**

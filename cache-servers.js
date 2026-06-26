@@ -59,43 +59,49 @@ export async function cacheServers(ns) {
  */
 function scan_all(ns, path, hosts) {
 	hosts.forEach(function (hostname) {
-		let maxMoney = ns.getServerMaxMoney(hostname);
-		let minSecurity = ns.getServerMinSecurityLevel(hostname);
-		let requiredHackingLevel = ns.getServerRequiredHackingLevel(hostname);
-		let numPortsRequired = ns.getServerNumPortsRequired(hostname);
-		let maxRam = ns.getServerMaxRam(hostname);
-		let hasRoot = ns.hasRootAccess(hostname);
-		let hackSkill = ns.getHackingLevel();
-
 		let hostpath = path;
 		if (hostname !== 'home') {
 			hostpath += 'connect ';
 		}
 		hostpath += hostname + '; ';
 
-		cache.push({
-			'host': hostname,
-			'maxMoney': maxMoney,
-			'minSecurity': minSecurity,
-			'requiredHackingLevel': requiredHackingLevel,
-			'numPortsRequired': numPortsRequired,
-			'maxRam': maxRam,
-			'hasRoot': hasRoot,
-			'ratio': maxMoney / minSecurity,
-			'hackingRatio': (requiredHackingLevel - 1) / hackSkill,
-			'path': hostpath,
-		});
-		cached[hostname] = true;
+		try {
+			let maxMoney = ns.getServerMaxMoney(hostname);
+			let minSecurity = ns.getServerMinSecurityLevel(hostname);
+			let requiredHackingLevel = ns.getServerRequiredHackingLevel(hostname);
+			let numPortsRequired = ns.getServerNumPortsRequired(hostname);
+			let maxRam = ns.getServerMaxRam(hostname);
+			let hasRoot = ns.hasRootAccess(hostname);
+			let hackSkill = ns.getHackingLevel();
 
-		let toscan = [];
-		ns.scan(hostname).forEach(function (newhostname) {
-			// Skip already scanned hosts.
-			if (cached[newhostname] === true) {
-				return;
-			}
+			cache.push({
+				'host': hostname,
+				'maxMoney': maxMoney,
+				'minSecurity': minSecurity,
+				'requiredHackingLevel': requiredHackingLevel,
+				'numPortsRequired': numPortsRequired,
+				'maxRam': maxRam,
+				'hasRoot': hasRoot,
+				'ratio': maxMoney / minSecurity,
+				'hackingRatio': (requiredHackingLevel - 1) / hackSkill,
+				'path': hostpath,
+			});
+		} catch {
+			// Skip servers whose info can't be queried (e.g., hacknet servers in v3.0+).
+		}
 
-			toscan.push(newhostname);
-		});
-		scan_all(ns, hostpath, toscan);
+		if (cached[hostname] !== true) {
+			cached[hostname] = true;
+
+			let toscan = [];
+			ns.scan(hostname).forEach(function (newhostname) {
+				if (cached[newhostname] === true) {
+					return;
+				}
+
+				toscan.push(newhostname);
+			});
+			scan_all(ns, hostpath, toscan);
+		}
 	});
 }
