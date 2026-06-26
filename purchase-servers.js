@@ -27,7 +27,7 @@ export async function main(ns) {
 
 		// Continuously try to purchase servers until we've reached the maximum
 		// amount of servers.
-		let maxServers = ns.getPurchasedServerLimit();
+		let maxServers = ns.cloud.getServerLimit();
 		while (i <= maxServers) {
 			let hostname = 'pserv-' + i;
 
@@ -35,7 +35,7 @@ export async function main(ns) {
 			if (ns.serverExists(hostname) && ns.getServerMaxRam(hostname) >= ram) {
 				ns.print(i + '/' + maxServers);
 				i++;
-			} else if (ns.getServerMoneyAvailable('home') > ns.getPurchasedServerCost(ram)) {
+			} else if (ns.getServerMoneyAvailable('home') > ns.cloud.getServerCost(ram)) {
 				// If the server is smaller than desired, delete it.
 				if (ns.serverExists(hostname) && ns.getServerMaxRam(hostname) < ram) {
 					// Prerequisite: Stop any running processes.
@@ -45,7 +45,7 @@ export async function main(ns) {
 
 				// If there is no server, purchase one.
 				if (!ns.serverExists(hostname)) {
-					ns.purchaseServer(hostname, ram);
+					ns.cloud.purchaseServer(hostname, ram);
 
 					ns.toast('Purchased ' + hostname + ' ' + display_ram + orders[order], 'success', 30000);
 				}

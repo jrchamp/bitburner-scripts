@@ -29,8 +29,8 @@ export async function cacheServers(ns) {
 	ns.disableLog('scan');
 	ns.disableLog('scp');
 
-	let file = getServersCacheFilename(ns);
 	ns.print('Building server cache');
+	let file = getServersCacheFilename();
 	cached = {};
 	cache = [];
 	scan_all(ns, '', ['home']);
@@ -44,8 +44,8 @@ export async function cacheServers(ns) {
 	let count = 0;	
 	for (let i = 0; i < cache.length; i++) {
 		let server = cache[i];
-		if (server.host !== 'home' && server.hasRoot) {
-			await ns.scp(file, 'home', server.host);
+		if (server.hasRoot) {
+			await ns.scp(file, server.host);
 			count++;
 		}
 	}

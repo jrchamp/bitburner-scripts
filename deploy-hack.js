@@ -53,6 +53,10 @@ export async function main(ns) {
 			let server = servers[i];
 			let hostname = server.host;
 
+			if (hostname === 'home' || hostname === 'pserv-1') {
+				continue;
+			}
+
 			if (!server.hasRoot) {
 				// Double check it for next time.
 				tohack.push(server);
@@ -130,10 +134,8 @@ export async function main(ns) {
 			let availableRam = server.maxRam - ns.getServerUsedRam(hostname);
 			if (availableRam >= scriptRam) {
 				// Copy the attack script and supporting files.
-				if (hostname !== 'home') {
-					ns.print('Copying attack files to ' + hostname);
-					await ns.scp(files, 'home', hostname);
-				}
+				ns.print('Copying attack files to ' + hostname);
+				await ns.scp(files, hostname, 'home');
 
 				for (const taskType in tasks) {
 					script = tasks[taskType];
