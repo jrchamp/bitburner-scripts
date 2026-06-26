@@ -75,13 +75,13 @@ export async function main(ns) {
 				}
 			}
 
-			// Collect worker servers (rooted, not home/pserv-1, have RAM).
+			// Collect worker servers (rooted with RAM), sorted by RAM descending.
 			let workers = [];
 			for (let server of servers) {
-				if (server.host === 'home' || server.host === 'pserv-1') continue;
 				if (!server.hasRoot || server.maxRam <= 0) continue;
 				workers.push(server);
 			}
+			workers.sort((a, b) => b.maxRam - a.maxRam);
 
 			if (workers.length === 0) {
 				if (servers.length > 0) {
@@ -96,20 +96,20 @@ export async function main(ns) {
 				await ns.scp(allFiles, worker.host, 'home');
 			}
 
-			// Calculate total thread budget and divide across targets.
+			// Deploy one batch per target, each getting whatever RAM is left.
 			let targets = await getAllTargets(ns);
 			let ramW = ns.getScriptRam('task-weaken.js');
-			let totalBudget = 0;
-			for (let worker of workers) {
-				totalBudget += Math.floor((worker.maxRam - ns.getServerUsedRam(worker.host)) / ramW);
-			}
-			let budgetPerTarget = Math.max(1, Math.floor(totalBudget / Math.max(1, targets.length)));
-
-			// Calculate and deploy batches for each target.
 			let batchesDeployed = 0;
 			let longestWeaken = 0;
+
 			for (let target of targets) {
-				let batch = calculateBatch(ns, target, budgetPerTarget);
+				let availBudget = 0;
+				for (let worker of workers) {
+					availBudget += Math.floor((worker.maxRam - ns.getServerUsedRam(worker.host)) / ramW);
+				}
+				if (availBudget <= 0) break;
+
+				let batch = calculateBatch(ns, target, availBudget);
 				if (!batch) continue;
 
 				let deployed = deployBatch(ns, batch, workers);
@@ -169,7 +169,7 @@ function tryRoot(ns, server, hackSkill) {
 /**
  * Calculate a coordinated batch for one target that fits within a thread budget.
  *
- * Tries hack fractions from 50% down to 0.1% until the total threads fit.
+ * Tries hack fractions from 75% down to 0.1% until the total threads fit.
  * Returns { host, hackThreads, growThreads, weakenThreads, weakenTime, growDelay, hackDelay }
  * or null if the target can't be batched.
  */
@@ -185,7 +185,7 @@ function calculateBatch(ns, target, threadBudget) {
 
 	let maxHackThreads = Math.floor(1 / hackPerThread);
 
-	for (let hackFraction = 0.5; hackFraction >= 0.001; hackFraction /= 2) {
+	for (let hackFraction = 0.75; hackFraction >= 0.001; hackFraction /= 2) {
 		let hackThreads = Math.max(1, Math.ceil(hackFraction / hackPerThread));
 		if (hackThreads > maxHackThreads) {
 			hackThreads = Math.max(1, maxHackThreads);
