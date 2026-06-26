@@ -59,12 +59,9 @@ export async function main(ns) {
 				continue;
 			}
 
-			// Copy files to all workers and kill stale task scripts.
+			// Copy files to all workers.
 			for (let worker of workers) {
 				await ns.scp(allFiles, worker.host, 'home');
-				for (let script of taskScripts) {
-					ns.scriptKill(script, worker.host);
-				}
 			}
 
 			// Calculate and deploy batches for each target.
